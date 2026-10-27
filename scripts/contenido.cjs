@@ -4,6 +4,7 @@
 //   node scripts/contenido.cjs clientes
 //   node scripts/contenido.cjs ver "La Pastelería" 2026-11
 //   node scripts/contenido.cjs agregar calendario.json
+//   node scripts/contenido.cjs completar piezas.json   (agrega "pieza" a publicaciones existentes)
 //   node scripts/contenido.cjs crear-cliente "Librería Centro" "notas opcionales"
 //   node scripts/contenido.cjs plan "Librería Centro" "Placa=8, Reel=6, Efeméride o promo=7"
 //   node scripts/contenido.cjs borrar-mes "La Pastelería" 2026-11
@@ -80,7 +81,7 @@ if (cmd === "clientes") {
   const posts = d.posts.filter((p) => p.clientId === c.id && p.date.startsWith(month)).sort((a, b) => a.date.localeCompare(b.date));
   if (!posts.length) console.log(`${c.name} no tiene publicaciones${month ? ` en ${month}` : ""}.`);
   const estado = (p) => (p.status === "aprobada" ? " [aprobada]" : p.status === "cambios" ? ` [con cambios: ${p.feedback || "sin detalle"}]` : "");
-  for (const p of posts) console.log(`\n## ${p.date} · ${p.title}${estado(p)}\n${p.copy}`);
+  for (const p of posts) console.log(`\n## ${p.date} · ${p.title}${estado(p)}\n${p.copy}${p.piece ? `\n\n### Pieza\n${p.piece}` : ""}`);
 } else if (cmd === "agregar") {
   if (!args[0]) fail("Falta el archivo .json con el calendario.");
   const input = JSON.parse(fs.readFileSync(args[0], "utf8"));
@@ -100,11 +101,39 @@ if (cmd === "clientes") {
       skipped++;
       continue;
     }
-    d.posts.push({ id: crypto.randomUUID(), clientId: c.id, date: p.fecha, title, copy: String(p.copy || "").trim() });
+    d.posts.push({
+      id: crypto.randomUUID(),
+      clientId: c.id,
+      date: p.fecha,
+      title,
+      copy: String(p.copy || "").trim(),
+      piece: p.pieza ? String(p.pieza).trim() : undefined,
+    });
     added++;
   }
   save(d);
   console.log(`Listo: ${added} publicaciones cargadas para ${c.name}${skipped ? ` (${skipped} ya estaban y no se repitieron)` : ""}.`);
+} else if (cmd === "completar") {
+  // Agrega o cambia la pieza (y, si viene, el copy) de publicaciones que ya existen, por fecha y título.
+  if (!args[0]) fail("Falta el archivo .json con las piezas.");
+  const input = JSON.parse(fs.readFileSync(args[0], "utf8"));
+  const d = load();
+  const c = findClient(d, input.cliente);
+  const missing = [];
+  let done = 0;
+  for (const p of input.publicaciones || []) {
+    const post = d.posts.find((x) => x.clientId === c.id && x.date === p.fecha && norm(x.title) === norm(p.titulo));
+    if (!post) {
+      missing.push(`${p.fecha} · ${p.titulo}`);
+      continue;
+    }
+    if (p.pieza) post.piece = String(p.pieza).trim();
+    if (p.copy) post.copy = String(p.copy).trim();
+    done++;
+  }
+  if (missing.length) fail(`No encontré estas publicaciones (no se cambió nada):\n${missing.join("\n")}`);
+  save(d);
+  console.log(`Listo: ${done} publicaciones completadas para ${c.name}.`);
 } else if (cmd === "crear-cliente") {
   const [name, notes] = args;
   if (!name) fail("Falta el nombre del cliente.");
@@ -145,6 +174,6 @@ if (cmd === "clientes") {
   console.log(`Borradas ${before - d.posts.length} publicaciones de ${c.name} en ${month}.`);
 } else {
   fail(
-    "Comandos: clientes | ver <cliente> [YYYY-MM] | agregar <archivo.json> | crear-cliente <nombre> [notas] | plan <cliente> <Tipo=n, ...> | borrar-mes <cliente> <YYYY-MM>",
+    "Comandos: clientes | ver <cliente> [YYYY-MM] | agregar <archivo.json> | completar <archivo.json> | crear-cliente <nombre> [notas] | plan <cliente> <Tipo=n, ...> | borrar-mes <cliente> <YYYY-MM>",
   );
 }

@@ -77,6 +77,8 @@ export interface ContentPost {
   title: string;
   /** Texto del posteo con hashtags, listo para copiar. */
   copy: string;
+  /** La pieza en sí: texto de la placa, guion del reel y notas de diseño. */
+  piece?: string;
   /** Aprobación del cliente. Sin valor = pendiente. */
   status?: PostStatus;
   /** Lo que pidió cambiar el cliente. */

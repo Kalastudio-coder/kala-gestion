@@ -210,6 +210,7 @@ function PostModal({ post, onClose }: { post: ContentPost; onClose: () => void }
   const isNew = !post.id;
   const [f, setF] = useState(post);
   const [copied, setCopied] = useState(false);
+  const [tab, setTab] = useState<"copy" | "pieza">("copy");
   const set = (patch: Partial<ContentPost>) => setF((x) => ({ ...x, ...patch }));
   const valid = f.title.trim() && f.date;
 
@@ -221,6 +222,7 @@ function PostModal({ post, onClose }: { post: ContentPost; onClose: () => void }
       id: f.id || uid(),
       title: f.title.trim(),
       copy: f.copy.trim(),
+      piece: f.piece?.trim() || undefined,
       feedback: f.status === "cambios" ? f.feedback?.trim() || undefined : undefined,
     };
     update((d) => ({
@@ -236,8 +238,9 @@ function PostModal({ post, onClose }: { post: ContentPost; onClose: () => void }
     onClose();
   };
 
+  const current = tab === "copy" ? f.copy : (f.piece ?? "");
   const copy = async () => {
-    await navigator.clipboard.writeText(f.copy);
+    await navigator.clipboard.writeText(current);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -253,14 +256,44 @@ function PostModal({ post, onClose }: { post: ContentPost; onClose: () => void }
             <Input type="date" value={f.date} onChange={(e) => set({ date: e.target.value })} />
           </Field>
         </div>
-        <Field label="Copy">
-          <Textarea
-            value={f.copy}
-            onChange={(e) => set({ copy: e.target.value })}
-            className="min-h-56 leading-relaxed"
-            placeholder="El texto del posteo, con emojis y hashtags."
-          />
-        </Field>
+        <div>
+          <div className="mb-1.5 flex w-fit rounded-xl border border-line p-0.5 text-[13px]">
+            {(
+              [
+                ["copy", "Copy"],
+                ["pieza", "Contenido de la pieza"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                type="button"
+                key={value}
+                onClick={() => setTab(value)}
+                className={cx(
+                  "flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5",
+                  tab === value ? "bg-panel-2 font-medium text-ink" : "text-muted hover:text-ink",
+                )}
+              >
+                {label}
+                {value === "pieza" && f.piece?.trim() && <span className="h-1.5 w-1.5 rounded-full bg-ok" />}
+              </button>
+            ))}
+          </div>
+          {tab === "copy" ? (
+            <Textarea
+              value={f.copy}
+              onChange={(e) => set({ copy: e.target.value })}
+              className="min-h-56 leading-relaxed"
+              placeholder="El texto del posteo, con emojis y hashtags."
+            />
+          ) : (
+            <Textarea
+              value={f.piece ?? ""}
+              onChange={(e) => set({ piece: e.target.value })}
+              className="min-h-56 leading-relaxed"
+              placeholder="Texto que va en la placa, guion del reel toma por toma y notas de diseño."
+            />
+          )}
+        </div>
         <Field label="Aprobación del cliente">
           <div className="grid grid-cols-3 gap-2">
             {STATUSES.map((s) => (
@@ -285,9 +318,9 @@ function PostModal({ post, onClose }: { post: ContentPost; onClose: () => void }
         )}
         <div className="flex items-center justify-between gap-2 pt-2">
           <div className="flex gap-1">
-            {f.copy.trim() && (
+            {current.trim() && (
               <Button type="button" variant="soft" onClick={copy}>
-                {copied ? <Check size={15} /> : <Copy size={15} />} {copied ? "Copiado" : "Copiar copy"}
+                {copied ? <Check size={15} /> : <Copy size={15} />} {copied ? "Copiado" : tab === "copy" ? "Copiar copy" : "Copiar pieza"}
               </Button>
             )}
             {!isNew && (

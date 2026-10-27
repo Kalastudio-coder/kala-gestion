@@ -28,7 +28,8 @@ el PDF copiado, para pegarlo con Ctrl+V (WhatsApp no deja adjuntar archivos desd
 
 Cada cliente puede tener un **plan de contenido mensual** (por ejemplo 8 placas, 6 reels y 7 efemérides o promos).
 El calendario muestra el avance del mes según el tipo que va al principio del título ("Reel: …"). Cada publicación
-tiene su **aprobación**: pendiente, aprobada o con cambios (con lo que pidió el cliente).
+tiene su **aprobación**: pendiente, aprobada o con cambios (con lo que pidió el cliente), y además del copy puede
+llevar el **contenido de la pieza**: texto de la placa, guion del reel y notas de diseño.
 
 ## Cobros, gastos y recibos
 
