@@ -3,12 +3,30 @@ const { execFile } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
-// Los datos viven en %APPDATA%\Kala Gestión: el instalador puede actualizarse sin tocarlos.
+// Los datos viven en Documentos\Kala Gestión\Datos. No en AppData: los programas instalados desde la
+// Microsoft Store (como la app de Claude) ven una copia aparte de AppData, y así todos leen el mismo archivo.
 // KALA_DATA_DIR sirve para probar con otra carpeta sin tocar los datos reales.
 if (process.env.KALA_DATA_DIR) app.setPath("userData", process.env.KALA_DATA_DIR);
-const dataDir = () => app.getPath("userData");
+// Para probar el paso de AppData a Documentos con carpetas falsas.
+if (process.env.KALA_TEST_USERDATA) app.setPath("userData", process.env.KALA_TEST_USERDATA);
+if (process.env.KALA_TEST_DOCS) app.setPath("documents", process.env.KALA_TEST_DOCS);
+const dataDir = () => process.env.KALA_DATA_DIR || path.join(app.getPath("documents"), "Kala Gestión", "Datos");
 const dataFile = () => path.join(dataDir(), "datos.json");
 const backupDir = () => path.join(dataDir(), "copias");
+
+// Hasta la 1.3.1 los datos estaban en AppData: la primera vez se copian a la carpeta nueva.
+// El original queda donde estaba, por las dudas.
+function migrateFromAppData() {
+  const oldDir = app.getPath("userData");
+  const oldFile = path.join(oldDir, "datos.json");
+  if (process.env.KALA_DATA_DIR || fs.existsSync(dataFile()) || !fs.existsSync(oldFile)) return;
+  fs.mkdirSync(backupDir(), { recursive: true });
+  fs.copyFileSync(oldFile, dataFile());
+  const oldBackups = path.join(oldDir, "copias");
+  if (fs.existsSync(oldBackups)) {
+    for (const f of fs.readdirSync(oldBackups)) fs.copyFileSync(path.join(oldBackups, f), path.join(backupDir(), f));
+  }
+}
 const MAX_BACKUPS = 30;
 const ICON = path.join(__dirname, "..", "build", "icon.png");
 
@@ -252,9 +270,17 @@ function setupUpdates() {
   updater.on("download-progress", (p) => sendUpdate({ state: "downloading", percent: Math.round(p.percent) }));
   updater.on("update-downloaded", (i) => sendUpdate({ state: "ready", version: i.version }));
   updater.on("error", (err) => sendUpdate({ state: "error", message: updateError(err) }));
-  const check = () => updater.checkForUpdates().catch(() => {});
+  let lastCheck = 0;
+  const check = () => {
+    lastCheck = Date.now();
+    updater.checkForUpdates().catch(() => {});
+  };
   setTimeout(check, 15_000);
-  setInterval(check, 6 * 60 * 60 * 1000);
+  setInterval(check, 60 * 60 * 1000);
+  // También al abrir la ventana desde la bandeja, si hace más de 10 minutos que no se buscó.
+  app.on("browser-window-focus", () => {
+    if (Date.now() - lastCheck > 10 * 60 * 1000) check();
+  });
 }
 
 ipcMain.handle("update:check", async () => {
@@ -331,6 +357,11 @@ app.on("before-quit", () => (quitting = true));
 
 app.whenReady().then(() => {
   app.setAppUserModelId("ar.com.kalastudio.gestion");
+  try {
+    migrateFromAppData();
+  } catch (err) {
+    dialog.showErrorBox("Kala Gestión", `No se pudieron pasar los datos a la carpeta nueva: ${err.message}`);
+  }
   watchExternalChanges();
   createTray();
   createWindow(!process.argv.includes("--oculto"));

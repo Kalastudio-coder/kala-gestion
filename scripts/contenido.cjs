@@ -18,7 +18,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
-const file = process.env.KALA_DATOS || path.join(process.env.APPDATA || "", "Kala Gestión", "datos.json");
+// Los datos están en Documentos\Kala Gestión\Datos (ver electron/main.cjs).
+const os = require("node:os");
+// Si Documentos está en OneDrive, la carpeta puede ser OneDrive\Documentos.
+const candidates = [
+  path.join(os.homedir(), "Documents"),
+  process.env.OneDrive && path.join(process.env.OneDrive, "Documentos"),
+  process.env.OneDrive && path.join(process.env.OneDrive, "Documents"),
+]
+  .filter(Boolean)
+  .map((d) => path.join(d, "Kala Gestión", "Datos", "datos.json"));
+const file = process.env.KALA_DATOS || candidates.find((f) => fs.existsSync(f)) || candidates[0];
 
 function fail(msg) {
   console.error(msg);

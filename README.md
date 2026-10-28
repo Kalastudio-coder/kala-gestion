@@ -4,7 +4,8 @@ Programa de escritorio (Windows) para manejar los clientes de marketing de Kala 
 cuánto y cada cuánto paga cada uno, vencimientos, atrasados, historial de cobros, recibos, gastos y el
 calendario de contenido de cada cliente.
 
-Electron + React + Tailwind v4. Los datos quedan sólo en la compu, en `%APPDATA%\Kala Gestión\datos.json`,
+Electron + React + Tailwind v4. Los datos quedan sólo en la compu, en `Documentos\Kala Gestión\Datos\datos.json`
+(hasta la 1.3.1 estaban en `%APPDATA%\Kala Gestión`; la app los pasa sola la primera vez),
 con una copia automática por día en la carpeta `copias` (se guardan las últimas 30).
 
 ## Cómo funciona

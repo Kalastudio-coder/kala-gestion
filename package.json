@@ -1,7 +1,7 @@
 {
   "name": "kala-gestion",
   "productName": "Kala Gestión",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Gestión de clientes, servicios y cobros de Kala Studio",
   "author": "Kala Studio",
   "private": true,
